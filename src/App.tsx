@@ -7,10 +7,11 @@ import { getTodos } from './api/todos';
 import { useEffect, useState } from 'react';
 import { Todo } from './types/Todo';
 import { Filter } from './types/Todo';
+import { ErrorNotification } from './components/error/ErrorNotification';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -19,14 +20,24 @@ export const App: React.FC = () => {
   const hasCompleted = todos.some(todo => todo.completed);
 
   useEffect(() => {
-    setIsLoading(true);
+    // setIsLoading(true);
     setError('');
 
     getTodos()
       .then(setTodos)
       .catch(() => setError('Unable to load todos'))
-      .finally(() => setIsLoading(false));
+      // .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   if (!USER_ID) {
     return <UserWarning />;
@@ -44,14 +55,14 @@ export const App: React.FC = () => {
     return true;
   });
 
+  const handleCloseError = () => {
+    setError('');
+  };
+
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
-
-      {isLoading && <p>Loading todos...</p>}
-
       {error && <div className="notification is-danger is-light">{error}</div>}
-
       <div className="todoapp__content">
         <header className="todoapp__header">
           {/* this button should have `active` class only if all todos are completed */}
@@ -90,11 +101,9 @@ export const App: React.FC = () => {
                       readOnly
                     />
                   </label>
-
                   <span data-cy="TodoTitle" className="todo__title">
                     {todo.title}
                   </span>
-
                   <button
                     type="button"
                     className="todo__remove"
@@ -102,6 +111,17 @@ export const App: React.FC = () => {
                   >
                     ×
                   </button>
+                  {/* overlay will cover the todo while it is being deleted or updated */}
+                  +{' '}
+                  <div data-cy="TodoLoader" className="modal overlay">
+                    +{' '}
+                    <div
+                      className="
+                      modal-background
+                      has-background-white-ter"
+                    />
+                    + <div className="loader" />+{' '}
+                  </div>
                 </div>
               ))}
             </section>
@@ -163,26 +183,10 @@ export const App: React.FC = () => {
           </>
         )}
       </div>
-
       {/* DON'T use conditional rendering to hide the notification */}
       {/* Add the 'hidden' class to hide the message smoothly */}
-      <div
-        data-cy="ErrorNotification"
-        className="notification is-danger is-light
-        has-text-weight-normal hidden"
-      >
-        <button data-cy="HideErrorButton" type="button" className="delete" />
-        {/* show only one message at a time */}
-        Unable to load todos
-        <br />
-        Title should not be empty
-        <br />
-        Unable to add a todo
-        <br />
-        Unable to delete a todo
-        <br />
-        Unable to update a todo
-      </div>
+      <ErrorNotification error={error} onClose={handleCloseError} />
+      {/* <button data-cy="HideErrorButton" type="button" className="delete" /> */}
     </div>
   );
 };
