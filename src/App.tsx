@@ -25,8 +25,8 @@ export const App: React.FC = () => {
 
     getTodos()
       .then(setTodos)
-      .catch(() => setError('Unable to load todos'))
-      // .finally(() => setIsLoading(false));
+      .catch(() => setError('Unable to load todos'));
+    // .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -112,7 +112,6 @@ export const App: React.FC = () => {
                     ×
                   </button>
                   {/* overlay will cover the todo while it is being deleted or updated */}
-                  +{' '}
                   <div data-cy="TodoLoader" className="modal overlay">
                     +{' '}
                     <div
