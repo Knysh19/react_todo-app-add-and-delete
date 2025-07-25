@@ -14,10 +14,14 @@ export const App: React.FC = () => {
   // const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [isAdding, setIsAdding] = useState(false);
+  const [title, setTitle] = useState('');
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
   const activeCount = todos.filter(todo => !todo.completed).length;
   const allCompleted = todos.length > 0 && todos.every(todo => todo.completed);
   const hasCompleted = todos.some(todo => todo.completed);
+  const API_URL = 'https://mate.academy/students-api';
 
   useEffect(() => {
     // setIsLoading(true);
@@ -59,6 +63,67 @@ export const App: React.FC = () => {
     setError('');
   };
 
+  const handleAddTodo = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
+      setError('Title should not be empty');
+
+      return;
+    }
+
+    setIsAdding(true);
+
+    const newTempTodo: Todo = {
+      id: 0,
+      userId: USER_ID,
+      title: trimmedTitle,
+      completed: false,
+    };
+
+    setTempTodo(newTempTodo);
+
+    try {
+      const response = await fetch(`${API_URL}/todos`, {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: USER_ID,
+          title: trimmedTitle,
+          completed: false,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error();
+      }
+
+      const createdTodo = await response.json();
+
+      setTodos(prevTodos => [...prevTodos, createdTodo]);
+      setTitle('');
+    } catch {
+      setErrorMessage('Unable to add a todo');
+      setTempTodo(null);
+    } finally {
+      setIsAdding(false);
+      setTempTodo(null);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await fetch(`${API_URL}/todos/${id}`, { method: 'DELETE' });
+      setTodos(prev => prev.filter(todo => todo.id !== id));
+    } catch {
+      setError('Unable to delete a todo');
+    }
+  };
+
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
@@ -73,12 +138,16 @@ export const App: React.FC = () => {
           />
 
           {/* Add a todo on form submit */}
-          <form>
+          <form onSubmit={handleAddTodo}>
             <input
               data-cy="NewTodoField"
               type="text"
               className="todoapp__new-todo"
               placeholder="What needs to be done?"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              disabled={isAdding}
+              autoFocus
             />
           </form>
         </header>
@@ -86,6 +155,38 @@ export const App: React.FC = () => {
         {todos.length > 0 && (
           <>
             <section className="todoapp__main" data-cy="TodoList">
+              {tempTodo && (
+                <div data-cy="Todo" className="todo">
+                  <label className="todo__status-label">
+                    <input
+                      data-cy="TodoStatus"
+                      type="checkbox"
+                      className="todo__status"
+                      checked={false}
+                      readOnly
+                    />
+                  </label>
+                  <span data-cy="TodoTitle" className="todo__title">
+                    {tempTodo.title}
+                  </span>
+                  <button
+                    type="button"
+                    className="todo__remove"
+                    data-cy="TodoDelete"
+                    onClick={() => handleDelete(todo.id)}
+                  >
+                    ×
+                  </button>
+                  <div data-cy="TodoLoader" className="modal overlay is-active">
+                    <div
+                      className="
+                      modal-background
+                      has-background-white-ter"
+                    />
+                    <div className="loader" />
+                  </div>
+                </div>
+              )}
               {filteredTodos.map(todo => (
                 <div
                   key={todo.id}
@@ -108,6 +209,7 @@ export const App: React.FC = () => {
                     type="button"
                     className="todo__remove"
                     data-cy="TodoDelete"
+                    onClick={() => handleDelete(todo.id)}
                   >
                     ×
                   </button>
